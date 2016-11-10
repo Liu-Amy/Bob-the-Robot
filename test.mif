@@ -1,0 +1,234 @@
+-- Altera Memory Initialization File (MIF)
+
+DEPTH = 2048;
+WIDTH = 16;
+
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
+
+CONTENT
+  BEGIN
+    [000..7FF] : 0000;  -- Default to NOP
+
+           000 : 0891;  -- 	LOAD   Zero
+           001 : 9883;  -- 	OUT    LVELCMD     ; Stop motors
+           002 : 988B;  -- 	OUT    RVELCMD
+           003 : 98B2;  -- 	OUT    SONAREN     ; Disable sonar (optional)
+           004 : 980A;  -- 	OUT    BEEP        ; Stop any beeping (optional)
+           005 : 8079;  -- 	CALL   SetupI2C    ; Configure the I2C to read the battery voltage
+           006 : 805B;  -- 	CALL   BattCheck   ; Get battery voltage (and end if too low).
+           007 : 9806;  -- 	OUT    LCD         ; Display battery voltage (hex, tenths of volts)
+           008 : 9003;  -- 	IN     XIO         ; XIO contains SAFETY signal
+           009 : 48A0;  -- 	AND    Mask4       ; SAFETY signal is bit 4
+           00A : 3810;  -- 	JPOS   WaitForUser ; If ready, jump to wait for PB3
+           00B : 9002;  -- 	IN     TIMER       ; We'll use the timer value to
+           00C : 489D;  -- 	AND    Mask1       ;  blink LED17 as a reminder to toggle SW17
+           00D : 6008;  -- 	SHIFT  8           ; Shift over to LED17
+           00E : 9807;  -- 	OUT    XLEDS       ; LED17 blinks at 2.5Hz (10Hz/4)
+           00F : 2808;  -- 	JUMP   WaitForSafety
+           010 : 9002;  -- 	IN     TIMER       ; We'll blink the LEDs above PB3
+           011 : 489D;  -- 	AND    Mask1
+           012 : 6005;  -- 	SHIFT  5           ; Both LEDG6 and LEDG7
+           013 : 108F;  -- 	STORE  Temp        ; (overkill, but looks nice)
+           014 : 6001;  -- 	SHIFT  1
+           015 : 508F;  -- 	OR     Temp
+           016 : 9807;  -- 	OUT    XLEDS
+           017 : 9003;  -- 	IN     XIO         ; XIO contains KEYs
+           018 : 489E;  -- 	AND    Mask2       ; KEY3 mask (KEY0 is reset and can't be read)
+           019 : 3810;  -- 	JPOS   WaitForUser ; not ready (KEYs are active-low, hence JPOS)
+           01A : 0891;  -- 	LOAD   Zero
+           01B : 9807;  -- 	OUT    XLEDS       ; clear LEDs once ready to continue
+           01C : 98C3;  -- 		OUT    RESETPOS    ; reset odometer in case wheels moved after programming
+           01D : 089C;  -- 	LOAD 	Mask0			; ENABLES SENSOR0
+           01E : 98B2;  --   	OUT 	SONAREN 
+           01F : 90A8;  --   	IN 		DIST0			; DISTANCE FROM ROBOT TO OBJECT
+           020 : 1350;  --   	STORE	SENSOR0			; STORE IT TO SENSOR0
+           021 : 90A8;  --   	IN		DIST0			;
+           022 : 6D9E;  --   	ADDI	-610
+           023 : 3848;  --   	JPOS	NOPE			;
+           024 : 90C1;  --   	IN		YPOS			; GET Y POSITION OF ROBOT
+           025 : 1B50;  --   	ADD		SENSOR0			; GRIDY -> (YPOS+SENSOR0)/2
+           026 : 1101;  --   	STORE	Y	
+           027 : 6011;  --   	SHIFT	-1				
+           028 : 1103;  --   	STORE	GRIDY	
+           029 : 90C0;  --  	IN	 	XPOS			; LOAD CURRENT X COORDINATE 
+           02A : 1100;  --  	STORE	X
+           02B : 1102;  --  	STORE	GRIDX			; STORE IT TO GRIDX
+           02C : 6011;  --  	SHIFT 	-1				; DIVIDE IT BY 2
+           02D : 1102;  --  	STORE	GRIDX			; STORE IT TO GRIDX
+           02E : 0902;  --  	LOAD 	GRIDX			; (GRIDX-1)4+(GRIDY-1)
+           02F : 6FFF;  --  	ADDI 	-1
+           030 : 6002;  --  	SHIFT	2
+           031 : 1903;  --  	ADD		GRIDY
+           032 : 6FFF;  --  	ADDI	-1
+           033 : 6004;  --  	SHIFT	4
+           034 : 1104;  --  	STORE	OFFSETs
+           035 : 0906;  --  	LOAD	OBJARRAY		; LOAD ADDRESS OF FIRST INDEX OF 2D ARRAY
+           036 : 1904;  --  	ADD		OFFSETs			; INDEX TO THE CORRECT INDEX OF 2D ARRAY
+           037 : 1105;  --  	STORE	ARRAYINDEX		; STORE ADDRESS OF CORRRECT INDEX OF 2D ARRAY
+           038 : 0892;  --  	LOAD	One				; AC -> 1/
+           039 : 7905;  --  	ISTORE 	ARRAYINDEX		; LOAD 1 TO THE CORRECT INDEX OF THE OCCUPANCY MAP
+           03A : 0906;  --  	LOAD 	OBJARRAY
+           03B : 1904;  --  	ADD 	OFFSETs
+           03C : 7105;  --  	ILOAD	ARRAYINDEX		; CHECKS IF THERE IS SOMETHING IN MAP AT THAT INDEX
+           03D : 2092;  --  	SUB		One
+           03E : 4045;  --  	JZERO	OCC
+           03F : 08AF;  -- 	LOAD   	FMid        	; defined below
+           040 : 9883;  -- 	OUT    	LVELCMD     	; send velocity to left and right wheels
+           041 : 90C2;  -- 	IN 		THETA			;
+           042 : 6EF7;  -- 	ADDI 	-265			;
+           043 : 383F;  -- 	JPOS	ROTATE		
+           044 : 8800;  -- 	RETURN			
+           045 : 08AF;  -- 	LOAD   	FMid
+           046 : 9883;  -- 	OUT		LVELCMD	
+           047 : 2845;  -- 	JUMP	OCC
+           048 : 980A;  -- 	OUT 	BEEP			;
+           049 : 08AF;  -- 	LOAD   	FMid			; IF THERE IS NOTHING THERE IN THE MAP, MOVE FORWARD
+           04A : 9883;  -- 	OUT    	LVELCMD     
+           04B : 988B;  -- 	OUT		RVELCMD			
+           04C : 281D;  -- 	JUMP	EnableSonars	;
+           04D : 0891;  -- 	LOAD   Zero         ; Stop everything.
+           04E : 9883;  -- 	OUT    LVELCMD
+           04F : 988B;  -- 	OUT    RVELCMD
+           050 : 98B2;  -- 	OUT    SONAREN
+           051 : 0854;  -- 	LOAD   DEAD         ; An indication that we are dead
+           052 : 9805;  -- 	OUT    SSEG2        ; "dEAd" on the LEDs
+           053 : 2853;  -- 	JUMP   Forever      ; Do this forever.
+           054 : DEAD;  -- 	DEAD:  DW &HDEAD    ; Example of a "local" variable
+           055 : 9802;  -- 	OUT    TIMER
+           056 : 9002;  -- 	IN     TIMER
+           057 : 9807;  -- 	OUT    XLEDS       ; User-feedback that a pause is occurring.
+           058 : 6FF6;  -- 	ADDI   -10         ; 1 second at 10Hz.
+           059 : 3056;  -- 	JNEG   Wloop
+           05A : 8800;  -- 	RETURN
+           05B : 8073;  -- 	CALL   GetBattLvl
+           05C : 405B;  -- 	JZERO  BattCheck   ; A/D hasn't had time to initialize
+           05D : 20B3;  -- 	SUB    MinBatt
+           05E : 3061;  -- 	JNEG   DeadBatt
+           05F : 18B3;  -- 	ADD    MinBatt     ; get original value back
+           060 : 8800;  -- 	RETURN
+           061 : 0895;  -- 	LOAD   Four
+           062 : 980A;  -- 	OUT    BEEP        ; start beep sound
+           063 : 8073;  -- 	CALL   GetBattLvl  ; get the battery level
+           064 : 9804;  -- 	OUT    SSEG1       ; display it everywhere
+           065 : 9805;  -- 	OUT    SSEG2
+           066 : 9806;  -- 	OUT    LCD
+           067 : 0891;  -- 	LOAD   Zero
+           068 : 6FFF;  -- 	ADDI   -1          ; 0xFFFF
+           069 : 9801;  -- 	OUT    LEDS        ; all LEDs on
+           06A : 9807;  -- 	OUT    XLEDS
+           06B : 8055;  -- 	CALL   Wait1       ; 1 second
+           06C : 0891;  -- 	Load   Zero
+           06D : 980A;  -- 	OUT    BEEP        ; stop beeping
+           06E : 0891;  -- 	LOAD   Zero
+           06F : 9801;  -- 	OUT    LEDS        ; LEDs off
+           070 : 9807;  -- 	OUT    XLEDS
+           071 : 8055;  -- 	CALL   Wait1       ; 1 second
+           072 : 2861;  -- 	JUMP   DeadBatt    ; repeat forever
+           073 : 08B5;  -- 	LOAD   I2CRCmd     ; 0x0190 (write 0B, read 1B, addr 0x90)
+           074 : 9890;  -- 	OUT    I2C_CMD     ; to I2C_CMD
+           075 : 9892;  -- 	OUT    I2C_RDY     ; start the communication
+           076 : 8081;  -- 	CALL   BlockI2C    ; wait for it to finish
+           077 : 9091;  -- 	IN     I2C_DATA    ; get the returned data
+           078 : 8800;  -- 	RETURN
+           079 : 8081;  -- 	CALL   BlockI2C    ; wait for idle
+           07A : 08B4;  -- 	LOAD   I2CWCmd     ; 0x1190 (write 1B, read 1B, addr 0x90)
+           07B : 9890;  -- 	OUT    I2C_CMD     ; to I2C_CMD register
+           07C : 0891;  -- 	LOAD   Zero        ; 0x0000 (A/D port 0, no increment)
+           07D : 9891;  -- 	OUT    I2C_DATA    ; to I2C_DATA register
+           07E : 9892;  -- 	OUT    I2C_RDY     ; start the communication
+           07F : 8081;  -- 	CALL   BlockI2C    ; wait for it to finish
+           080 : 8800;  -- 	RETURN
+           081 : 0891;  -- 	LOAD   Zero
+           082 : 108F;  -- 	STORE  Temp        ; Used to check for timeout
+           083 : 088F;  -- 	LOAD   Temp
+           084 : 6801;  -- 	ADDI   1           ; this will result in ~0.1s timeout
+           085 : 108F;  -- 	STORE  Temp
+           086 : 408A;  -- 	JZERO  I2CError    ; Timeout occurred; error
+           087 : 9092;  -- 	IN     I2C_RDY     ; Read busy signal
+           088 : 3883;  -- 	JPOS   BI2CL       ; If not 0, try again
+           089 : 8800;  -- 	RETURN             ; Else return
+           08A : 0891;  -- 	LOAD   Zero
+           08B : 692C;  -- 	ADDI   &H12C       ; "I2C"
+           08C : 9804;  -- 	OUT    SSEG1
+           08D : 9805;  -- 	OUT    SSEG2       ; display error message
+           08E : 288A;  -- 	JUMP   I2CError
+           08F : 0000;  -- Temp:     DW 0 ; "Temp" is not a great name, but can be useful
+           090 : FFFF;  -- NegOne:   DW -1
+           091 : 0000;  -- Zero:     DW 0
+           092 : 0001;  -- One:      DW 1
+           093 : 0002;  -- Two:      DW 2
+           094 : 0003;  -- Three:    DW 3
+           095 : 0004;  -- Four:     DW 4
+           096 : 0005;  -- Five:     DW 5
+           097 : 0006;  -- Six:      DW 6
+           098 : 0007;  -- Seven:    DW 7
+           099 : 0008;  -- Eight:    DW 8
+           09A : 0009;  -- Nine:     DW 9
+           09B : 000A;  -- Ten:      DW 10
+           09C : 0001;  -- Mask0:    DW &B00000001
+           09D : 0002;  -- Mask1:    DW &B00000010
+           09E : 0004;  -- Mask2:    DW &B00000100
+           09F : 0008;  -- Mask3:    DW &B00001000
+           0A0 : 0010;  -- Mask4:    DW &B00010000
+           0A1 : 0020;  -- Mask5:    DW &B00100000
+           0A2 : 0040;  -- Mask6:    DW &B01000000
+           0A3 : 0080;  -- Mask7:    DW &B10000000
+           0A4 : 00FF;  -- LowByte:  DW &HFF      ; binary 00000000 1111111
+           0A5 : 000F;  -- LowNibl:  DW &HF       ; 0000 0000 0000 1111
+           0A6 : 03C1;  -- OneMeter: DW 961       ; ~1m in 1.04mm units
+           0A7 : 01E1;  -- HalfMeter: DW 481      ; ~0.5m in 1.04mm units
+           0A8 : 024A;  -- TwoFeet:  DW 586       ; ~2ft in 1.04mm units
+           0A9 : 005A;  -- Deg90:    DW 90        ; 90 degrees in odometer units
+           0AA : 00B4;  -- Deg180:   DW 180       ; 180
+           0AB : 010E;  -- Deg270:   DW 270       ; 270
+           0AC : 0168;  -- Deg360:   DW 360       ; can never actually happen; for math only
+           0AD : 0064;  -- FSlow:    DW 100       ; 100 is about the lowest velocity value that will move
+           0AE : FF9C;  -- RSlow:    DW -100
+           0AF : 015E;  -- FMid:     DW 350       ; 350 is a medium speed
+           0B0 : FEA2;  -- RMid:     DW -350
+           0B1 : 01F4;  -- FFast:    DW 500       ; 500 is almost max speed (511 is max)
+           0B2 : FE0C;  -- RFast:    DW -500
+           0B3 : 008C;  -- MinBatt:  DW 140       ; 14.0V - minimum safe battery voltage
+           0B4 : 1190;  -- I2CWCmd:  DW &H1190    ; write one i2c byte, read one byte, addr 0x90
+           0B5 : 0190;  -- I2CRCmd:  DW &H0190    ; write nothing, read one byte, addr 0x90
+           100 : 0001;  -- X:				DW 		1
+           101 : 0001;  -- Y: 				DW		1
+           102 : 0001;  -- GRIDX:			DW		1
+           103 : 0001;  -- GRIDY:			DW		1
+           104 : 0000;  -- OFFSETs:		DW		0
+           105 : 0000;  -- ARRAYINDEX:		DW		0
+           106 : 0150;  -- OBJARRAY:		DW		&H150
+           150 : 0000;  -- A11:			DW		0				
+           151 : 0000;  -- A12:			DW		0
+           152 : 0000;  -- A13:			DW		0
+           153 : 0000;  -- A14:			DW		0
+           154 : 0000;  -- A21:			DW		0				
+           155 : 0000;  -- A22:			DW		0
+           156 : 0000;  -- A23:			DW		0
+           157 : 0000;  -- A24:			DW		0
+           158 : 0000;  -- A31:			DW		0				
+           159 : 0000;  -- A32:			DW		0
+           15A : 0000;  -- A33:			DW		0
+           15B : 0000;  -- A34:			DW		0
+           15C : 0000;  -- A41:			DW		0				
+           15D : 0000;  -- A42:			DW		0
+           15E : 0000;  -- A43:			DW		0
+           15F : 0000;  -- A44:			DW		0
+           160 : 0000;  -- A51:			DW		0				
+           161 : 0000;  -- A52:			DW		0
+           162 : 0000;  -- A53:			DW		0
+           163 : 0000;  -- A54:			DW		0
+           164 : 0000;  -- A61:			DW		0				
+           165 : 0000;  -- A62:			DW		0
+           166 : 0000;  -- A63:			DW		0
+           167 : 0000;  -- A64:			DW		0
+           350 : 0000;  -- SENSOR0:		DW		0
+           351 : 0000;  -- SENSOR1:		DW		0
+           352 : 0000;  -- SENSOR2:		DW		0
+           353 : 0000;  -- SENSOR3:		DW		0
+           354 : 0000;  -- SENSOR4:		DW		0
+           355 : 0000;  -- SENSOR5:		DW		0
+           356 : 0000;  -- SENSOR6:		DW		0
+           357 : 0000;  -- SENSOR7:		DW		0
+  END;
