@@ -43,50 +43,50 @@ CONTENT
            01E : 98B2;  --   	OUT 	SONAREN 
            01F : 90A8;  --   	IN 		DIST0			; DISTANCE FROM ROBOT TO OBJECT
            020 : 1350;  --   	STORE	SENSOR0			; STORE IT TO SENSOR0
-           021 : 90A8;  --   	IN		DIST0			;
-           022 : 6D9E;  --   	ADDI	-610
-           023 : 3848;  --   	JPOS	NOPE			;
-           024 : 90C1;  --   	IN		YPOS			; GET Y POSITION OF ROBOT
-           025 : 1B50;  --   	ADD		SENSOR0			; GRIDY -> (YPOS+SENSOR0)/2
-           026 : 1101;  --   	STORE	Y	
-           027 : 6011;  --   	SHIFT	-1				
-           028 : 1103;  --   	STORE	GRIDY	
-           029 : 90C0;  --  	IN	 	XPOS			; LOAD CURRENT X COORDINATE 
-           02A : 1100;  --  	STORE	X
-           02B : 1102;  --  	STORE	GRIDX			; STORE IT TO GRIDX
-           02C : 6011;  --  	SHIFT 	-1				; DIVIDE IT BY 2
-           02D : 1102;  --  	STORE	GRIDX			; STORE IT TO GRIDX
-           02E : 0902;  --  	LOAD 	GRIDX			; (GRIDX-1)4+(GRIDY-1)
-           02F : 6FFF;  --  	ADDI 	-1
-           030 : 6002;  --  	SHIFT	2
-           031 : 1903;  --  	ADD		GRIDY
-           032 : 6FFF;  --  	ADDI	-1
-           033 : 6004;  --  	SHIFT	4
-           034 : 1104;  --  	STORE	OFFSETs
-           035 : 0906;  --  	LOAD	OBJARRAY		; LOAD ADDRESS OF FIRST INDEX OF 2D ARRAY
-           036 : 1904;  --  	ADD		OFFSETs			; INDEX TO THE CORRECT INDEX OF 2D ARRAY
-           037 : 1105;  --  	STORE	ARRAYINDEX		; STORE ADDRESS OF CORRRECT INDEX OF 2D ARRAY
-           038 : 0892;  --  	LOAD	One				; AC -> 1/
-           039 : 7905;  --  	ISTORE 	ARRAYINDEX		; LOAD 1 TO THE CORRECT INDEX OF THE OCCUPANCY MAP
-           03A : 0906;  --  	LOAD 	OBJARRAY
-           03B : 1904;  --  	ADD 	OFFSETs
-           03C : 7105;  --  	ILOAD	ARRAYINDEX		; CHECKS IF THERE IS SOMETHING IN MAP AT THAT INDEX
-           03D : 2092;  --  	SUB		One
-           03E : 4045;  --  	JZERO	OCC
-           03F : 08AF;  -- 	LOAD   	FMid        	; defined below
-           040 : 9883;  -- 	OUT    	LVELCMD     	; send velocity to left and right wheels
-           041 : 90C2;  -- 	IN 		THETA			;
-           042 : 6EF7;  -- 	ADDI 	-265			;
-           043 : 383F;  -- 	JPOS	ROTATE		
-           044 : 8800;  -- 	RETURN			
-           045 : 08AF;  -- 	LOAD   	FMid
-           046 : 9883;  -- 	OUT		LVELCMD	
-           047 : 2845;  -- 	JUMP	OCC
-           048 : 980A;  -- 	OUT 	BEEP			;
-           049 : 08AF;  -- 	LOAD   	FMid			; IF THERE IS NOTHING THERE IN THE MAP, MOVE FORWARD
-           04A : 9883;  -- 	OUT    	LVELCMD     
-           04B : 988B;  -- 	OUT		RVELCMD			
-           04C : 281D;  -- 	JUMP	EnableSonars	;
+           021 : 6D9E;  --   	ADDI	-610			; IS THE OBJECT DETECTED WITHIN TWO FEET OF THE ROBOT?
+           022 : 3842;  --   	JPOS	NOPE			; OBJECT IS FARTHER THAN TWO FEET AWAY FROM THE ROBOT
+           023 : 90C1;  --   	IN		YPOS			; GET Y POSITION OF ROBOT
+           024 : 1B50;  --   	ADD		SENSOR0			; GRIDY -> (YPOS+SENSOR0)/2
+           025 : 1101;  --   	STORE	Y				; STORES THE Y COORDINATE OF THE OJBECT
+           026 : 6011;  --   	SHIFT	-1				
+           027 : 1103;  --   	STORE	GRIDY	
+           028 : 90C0;  --  	IN	 	XPOS			; LOAD CURRENT X COORDINATE 
+           029 : 1100;  --  	STORE	X				; STORES THE X COORDINATE OF THE OBJECT 
+           02A : 1102;  --  	STORE	GRIDX			; GRIDX -> XPOS/2
+           02B : 6011;  --  	SHIFT 	-1				 
+           02C : 1102;  --  	STORE	GRIDX			
+           02D : 0902;  --  	LOAD 	GRIDX			; OFFSETs -> (GRIDX-1)4+(GRIDY-1)
+           02E : 6FFF;  --  	ADDI 	-1				
+           02F : 6002;  --  	SHIFT	2
+           030 : 1903;  --  	ADD		GRIDY
+           031 : 6FFF;  --  	ADDI	-1
+           032 : 6004;  --  	SHIFT	4
+           033 : 1104;  --  	STORE	OFFSETs
+           034 : 0906;  --  	LOAD	OBJARRAY		; LOAD ADDRESS OF FIRST INDEX OF 2D ARRAY
+           035 : 1904;  --  	ADD		OFFSETs			; INDEX TO THE CORRECT INDEX OF 2D ARRAY
+           036 : 1105;  --  	STORE	ARRAYINDEX		; STORE ADDRESS OF CORRRECT INDEX OF 2D ARRAY
+           037 : 0892;  --  	LOAD	One				; AC -> 1
+           038 : 7905;  --  	ISTORE 	ARRAYINDEX		; LOAD 1 TO THE CORRECT INDEX OF THE OCCUPANCY MAP
+           039 : 0906;  --  	LOAD 	OBJARRAY	
+           03A : 1904;  --  	ADD 	OFFSETs
+           03B : 7105;  --  	ILOAD	ARRAYINDEX		; LOAD NUMBER IN THAT INDEX OF THE OCCUPANCY MAP
+           03C : 2092;  --  	SUB		One				; CHECKS IF THERE IS 1
+           03D : 403F;  --  	JZERO	OCC				; IF THERE IS A 1, GO TO OCC
+           03E : 2842;  --  	JUMP	NOPE			; ELSE, GO TO NOPE
+           03F : 08AF;  -- 	LOAD   	FMid			; MOVES IN A CIRCLE
+           040 : 9883;  -- 	OUT		LVELCMD	
+           041 : 283F;  -- 	JUMP	OCC
+           042 : 980A;  -- 	OUT 	BEEP			; IF THERE IS NOTHING THERE IN THE MAP, BEEP
+           043 : 08AF;  -- 	LOAD   	FMid			; AND MOVE FORWARD
+           044 : 9883;  -- 	OUT    	LVELCMD     
+           045 : 988B;  -- 	OUT		RVELCMD			
+           046 : 281D;  -- 	JUMP	EnableSonars	; GO BACK TO EnableSonars TO DETECT FOR A OBJECT AGAIN
+           047 : 08AF;  -- 	LOAD   	FMid        	; defined below
+           048 : 9883;  -- 	OUT    	LVELCMD     	; send velocity to left and right wheels
+           049 : 90C2;  -- 	IN 		THETA			;
+           04A : 6EF7;  -- 	ADDI 	-265			;
+           04B : 3847;  -- 	JPOS	ROTATE		
+           04C : 8800;  -- 	RETURN			
            04D : 0891;  -- 	LOAD   Zero         ; Stop everything.
            04E : 9883;  -- 	OUT    LVELCMD
            04F : 988B;  -- 	OUT    RVELCMD
@@ -192,13 +192,13 @@ CONTENT
            0B3 : 008C;  -- MinBatt:  DW 140       ; 14.0V - minimum safe battery voltage
            0B4 : 1190;  -- I2CWCmd:  DW &H1190    ; write one i2c byte, read one byte, addr 0x90
            0B5 : 0190;  -- I2CRCmd:  DW &H0190    ; write nothing, read one byte, addr 0x90
-           100 : 0001;  -- X:				DW 		1
-           101 : 0001;  -- Y: 				DW		1
-           102 : 0001;  -- GRIDX:			DW		1
-           103 : 0001;  -- GRIDY:			DW		1
-           104 : 0000;  -- OFFSETs:		DW		0
-           105 : 0000;  -- ARRAYINDEX:		DW		0
-           106 : 0150;  -- OBJARRAY:		DW		&H150
+           100 : 0001;  -- X:				DW 		1			; THE X COORDINATE OF THE OBJECT
+           101 : 0001;  -- Y: 				DW		1			; THE Y COORDINATE OF THE OBJECT
+           102 : 0001;  -- GRIDX:			DW		1			; THE X COORFINATE OF THE OBJECT ON THE GRID
+           103 : 0001;  -- GRIDY:			DW		1			; THE Y COORDINATE OF THE OBJECT ON THE GRID
+           104 : 0000;  -- OFFSETs:		DW		0			; OBJARRAY + OFFSETS = ARRAYINDEX
+           105 : 0000;  -- ARRAYINDEX:		DW		0			; ADDRESS OF THE CORRECT INDEX OF THE ARRAY
+           106 : 0150;  -- OBJARRAY:		DW		&H150		; ADDRESS OF THE FIRST INDEX OF THE 2D ARRAY/OCCUPANCY GRID
            150 : 0000;  -- A11:			DW		0				
            151 : 0000;  -- A12:			DW		0
            152 : 0000;  -- A13:			DW		0
