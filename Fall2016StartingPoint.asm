@@ -59,56 +59,80 @@ WaitForUser:
 ;***************************************************************
 ;* Main code
 ;***************************************************************
-Main:
-	OUT    RESETPOS    ; reset odometer in case wheels moved after programming
+EnableSonars:
+	; Many convenient constants are defined at the bottom of this file.
+	LOAD 	Mask0			; ENABLES SENSOR0
+  	OUT 	SONAREN 
+
+  	
+  	IN 		DIST0			; DISTANCE FROM ROBOT TO OBJECT
+  	STORE	SENSOR0			; STORE IT TO SENSOR0
+  	ADDI	-610			; IS THE OBJECT DETECTED WITHIN TWO FEET OF THE ROBOT?
+  	JPOS	NOPE			; OBJECT IS FARTHER THAN TWO FEET AWAY FROM THE ROBOT
+  	IN		YPOS			; GET Y POSITION OF ROBOT
+  	ADD		SENSOR0			; GRIDY -> (YPOS+SENSOR0)/2
+  	STORE	Y				; STORES THE Y COORDINATE OF THE OJBECT
+  	SHIFT	-1				
+  	STORE	GRIDY	
+
+  		
+ 	IN	 	XPOS			; LOAD CURRENT X COORDINATE 
+ 	STORE	X				; STORES THE X COORDINATE OF THE OBJECT 
+ 	STORE	GRIDX			; GRIDX -> XPOS/2
+ 	SHIFT 	-1				 
+ 	STORE	GRIDX			
+
+ 	LOAD 	GRIDX			; OFFSETs -> (GRIDX-1)4+(GRIDY-1)
+ 	ADDI 	-1				
+ 	SHIFT	2
+ 	ADD		GRIDY
+ 	ADDI	-1
+ 	SHIFT	4
+ 	STORE	OFFSETs
+ 	
+ 	LOAD	OBJARRAY		; LOAD ADDRESS OF FIRST INDEX OF 2D ARRAY
+ 	ADD		OFFSETs			; INDEX TO THE CORRECT INDEX OF 2D ARRAY
+ 	STORE	ARRAYINDEX		; STORE ADDRESS OF CORRRECT INDEX OF 2D ARRAY
+ 	
+ 	LOAD	One				; AC -> 1
+ 	ISTORE 	ARRAYINDEX		; LOAD 1 TO THE CORRECT INDEX OF THE OCCUPANCY MAP
+ 	
+ 	LOAD 	OBJARRAY	
+ 	ADD 	OFFSETs
+ 	
+ 	ILOAD	ARRAYINDEX		; LOAD NUMBER IN THAT INDEX OF THE OCCUPANCY MAP
+ 	SUB		One				; CHECKS IF THERE IS 1
+ 	JZERO	OCC				; IF THERE IS A 1, GO TO OCC
+ 	JUMP	NOPE			; ELSE, GO TO NOPE
+ 	
 	
-	; configure timer interrupts
-	LOADI  10          ; 10ms * 10 = 0.1s rate, or 10Hz.
-	OUT    CTIMER      ; turn on timer peripheral
-	SEI    &B0010      ; enable interrupts from source 2 (timer)
-	; at this point, timer interrupts will be firing at 10Hz, and
-	; code in that ISR will attempt to control the robot.
-	; If you want to take manual control of the robot,
-	; execute a CLI &B0010 to disable the interrupt.
+OCC:	
+	LOAD   	FMid			; MOVES IN A CIRCLE
+	OUT		LVELCMD	
+	JUMP	OCC
+; 	IN 		YPOS			; HOW MUCH AS THE ROBOT MOVED IN THE Y DIRECTION
+; 	SUB		Y				
+; 	JPOS	OCC				; IF NOT, KEEP ON MOVING 
+; 	JUMP	DIE				; IF YES (IT REACHED THE OBJECT), STOP
+
+NOPE:
+	OUT 	BEEP			; IF THERE IS NOTHING THERE IN THE MAP, BEEP
+	LOAD   	FMid			; AND MOVE FORWARD
+	OUT    	LVELCMD     
+	OUT		RVELCMD			
+	JUMP	EnableSonars	; GO BACK TO EnableSonars TO DETECT FOR A OBJECT AGAIN
 	
+ROTATE:
+	LOAD   	FMid        	; defined below
+	OUT    	LVELCMD     	; send velocity to left and right wheels
+	IN 		THETA			;
+	ADDI 	-265			;
+	JPOS	ROTATE		
+	RETURN			
 
-
-; As a quick demo of the movement control, here I set a constant
-; desired forward velocity (FSlow), and a desired heading of XPOS/8.
-; Since the robot starts facing the X direction, as XPOS increases,
-; the robot should start turning to the left, until the robot
-; asymptotes at 90*8[XPOS units] (about 2.5ft), at which point
-; the robot will be heading in the YPOS direction, so XPOS will not change.
-;
-; Once the robot's YPOS exceeds XPOS, I set the desired angle to 225,
-; which should face the robot more or less back where it started.
-
-; Once the robot passes YPOS = 0, the robot stops.
-
-	LOAD   FSlow
-	STORE  DVel       ; desired forward velocity
-Test1:
-	IN     XPOS
-	STORE  Temp       ; keep for later
-	SHIFT  -3         ; divide by 8
-	STORE  DTheta
-	IN     YPOS
-	SUB    Temp       ; XPOS from earlier
-	; to account for small position errors just
-	; as the robot gets started, I'm giving XPOS a
-	; tiny boost.
-	ADDI   -5        
-	JNEG   Test1      ; XPOS > YPOS: keep going
-
-	; robot passed Y mark, so turn around
-	LOADI  225
-	STORE  DTheta
-Test2:
-	IN     YPOS
-	JPOS   Test2
-	; YPOS negative, so done.  Fall through to Die.
-
-
+;***************************************************************
+;* End main code
+;***************************************************************
 	
 Die:
 ; Sometimes it's useful to permanently stop execution.
@@ -730,3 +754,56 @@ THETA:    EQU &HC2  ; Current rotational position of robot (0-359)
 RESETPOS: EQU &HC3  ; write anything here to reset odometry to 0
 RIN:      EQU &HC8
 LIN:      EQU &HC9
+
+;*********************************************************************;
+;NEW VARIABLES;
+;*********************************************************************;
+				ORG 	&H100
+X:				DW 		1			; THE X COORDINATE OF THE OBJECT
+Y: 				DW		1			; THE Y COORDINATE OF THE OBJECT
+GRIDX:			DW		1			; THE X COORFINATE OF THE OBJECT ON THE GRID
+GRIDY:			DW		1			; THE Y COORDINATE OF THE OBJECT ON THE GRID
+OFFSETs:		DW		0			; OBJARRAY + OFFSETS = ARRAYINDEX
+ARRAYINDEX:		DW		0			; ADDRESS OF THE CORRECT INDEX OF THE ARRAY
+OBJARRAY:		DW		&H150		; ADDRESS OF THE FIRST INDEX OF THE 2D ARRAY/OCCUPANCY GRID
+
+				ORG 	&H150		; START OF THE 2D ARRAY/OCCUPANCY GRID
+A11:			DW		0				
+A12:			DW		0
+A13:			DW		0
+A14:			DW		0
+
+A21:			DW		0				
+A22:			DW		0
+A23:			DW		0
+A24:			DW		0
+
+A31:			DW		0				
+A32:			DW		0
+A33:			DW		0
+A34:			DW		0
+
+A41:			DW		0				
+A42:			DW		0
+A43:			DW		0
+A44:			DW		0
+
+A51:			DW		0				
+A52:			DW		0
+A53:			DW		0
+A54:			DW		0
+
+A61:			DW		0				
+A62:			DW		0
+A63:			DW		0
+A64:			DW		0
+
+				ORG 	&H350
+SENSOR0:		DW		0
+SENSOR1:		DW		0
+SENSOR2:		DW		0
+SENSOR3:		DW		0
+SENSOR4:		DW		0
+SENSOR5:		DW		0
+SENSOR6:		DW		0
+SENSOR7:		DW		0
